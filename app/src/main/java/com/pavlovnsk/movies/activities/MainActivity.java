@@ -1,88 +1,64 @@
 package com.pavlovnsk.movies.activities;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
+import androidx.appcompat.widget.SearchView;
 
 import android.os.Bundle;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.widget.Toast;
 
-import com.android.volley.Request;
-import com.android.volley.RequestQueue;
-import com.android.volley.Response;
-import com.android.volley.VolleyError;
-import com.android.volley.toolbox.JsonObjectRequest;
-import com.android.volley.toolbox.Volley;
+import com.pavlovnsk.movies.fragments.ListFragment;
 import com.pavlovnsk.movies.R;
-import com.pavlovnsk.movies.data.MovieRecyclerViewAdapter;
-import com.pavlovnsk.movies.model.Movie;
-
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-
-import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity {
 
-    private RecyclerView recyclerView;
-    private MovieRecyclerViewAdapter adapter;
-    private ArrayList <Movie> movies;
-    private RequestQueue requestQueue;
+    private static long back_pressed;
+    private ListFragment leftFragment;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-        movies = new ArrayList<>();
-        requestQueue = Volley.newRequestQueue(this);
-
-        recyclerView = findViewById(R.id.RV_main);
-        recyclerView.setHasFixedSize(true);
-        recyclerView.setLayoutManager(new LinearLayoutManager(this));
-
-        getMovies();
     }
 
-    private void getMovies() {
-        String url = "http://www.omdbapi.com/?apikey=29e4ffde&s=batman";
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.search_menu, menu);
 
-        JsonObjectRequest request = new JsonObjectRequest(Request.Method.GET, url, null, new Response.Listener<JSONObject>() {
+        MenuItem searchItem = menu.findItem(R.id.search);
+        SearchView searchView = (SearchView) searchItem.getActionView();
+        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
             @Override
-            public void onResponse(JSONObject response) {
-                try {
-                    JSONArray jsonArray = response.getJSONArray("Search");
+            public boolean onQueryTextSubmit(String query) {
+                Bundle bundle = new Bundle();
+                bundle.putString("query", query);
+                leftFragment = new ListFragment();
+                leftFragment.setArguments(bundle);
 
-                    for (int i = 0; i < jsonArray.length(); i++) {
-                        JSONObject jsonObject = jsonArray.getJSONObject(i);
-
-                        String title = jsonObject.getString("Title");
-                        String year = jsonObject.getString("Year");
-                        String posterURL = jsonObject.getString("Poster");
-
-                        Movie movie = new Movie();
-                        movie.setTitle(title);
-                        movie.setYear(year);
-                        movie.setPoster(posterURL);
-
-                        movies.add(movie);
-                    }
-
-                    adapter = new MovieRecyclerViewAdapter(MainActivity.this, movies);
-                    recyclerView.setAdapter(adapter);
-
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-
+                getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container, leftFragment).commit();
+                return true;
             }
-        }, new Response.ErrorListener() {
+
             @Override
-            public void onErrorResponse(VolleyError error) {
-                error.printStackTrace();
+            public boolean onQueryTextChange(String newText) {
+                return false;
             }
         });
+        return true;
+    }
 
-        requestQueue.add(request);
+
+    @Override
+    public void onBackPressed() {
+        if (getSupportFragmentManager().getBackStackEntryCount() != 0) {
+            getSupportFragmentManager().popBackStack();
+        } else {
+            if (back_pressed + 2000 > System.currentTimeMillis())
+                super.onBackPressed();
+            else
+                Toast.makeText(getBaseContext(), getText(R.string.click_again_to_exit), Toast.LENGTH_SHORT).show();
+            back_pressed = System.currentTimeMillis();
+        }
     }
 }
